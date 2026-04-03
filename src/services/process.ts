@@ -6,7 +6,7 @@ export class ProcessService {
     await Bun.sleep(500); 
     return { success: true, timestamp: Date.now() };
   }
-}a
+}
 
 
 
