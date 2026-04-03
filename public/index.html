@@ -3,143 +3,224 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Large File Upload Dashboard</title>
+    <title>Video Pipeline Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root {
-            --bg: #0f172a;
-            --card: #1e293b;
-            --text: #f8fafc;
-            --accent: #3b82f6;
-            --success: #10b981;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-        }
-        .container {
-            background-color: var(--card);
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 500px;
-        }
-        h1 { margin-bottom: 1.5rem; font-size: 1.5rem; text-align: center; }
-        .status-badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            background-color: #475569;
-            margin-bottom: 1.5rem;
-        }
-        .status-badge.ok { background-color: var(--success); }
-        .input-group { margin-bottom: 1rem; }
-        label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; }
-        input {
-            width: 100%;
-            padding: 0.75rem;
-            border-radius: 6px;
-            border: 1px solid #334155;
-            background: #0f172a;
-            color: white;
-            box-sizing: border-box;
-        }
-        button {
-            width: 100%;
-            padding: 0.75rem;
-            border-radius: 6px;
-            border: none;
-            background-color: var(--accent);
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        button:hover { opacity: 0.9; }
-        #log {
-            margin-top: 1.5rem;
-            padding: 1rem;
-            background: #0f172a;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 0.8125rem;
-            max-height: 150px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .progress-bar { transition: width 0.3s ease; }
+        .session-card { transition: transform 0.2s; }
+        .session-card:hover { transform: translateY(-2px); }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>Backend Dashboard</h1>
-        <div style="text-align: center;">
-            <span id="health-badge" class="status-badge">Checking Status...</span>
-        </div>
+<body class="p-4 md:p-8">
+    <div class="max-w-5xl mx-auto">
+        <header class="flex justify-between items-center mb-8 bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700">
+            <div>
+                <h1 class="text-2xl font-bold text-white">Video Pipeline</h1>
+                <p class="text-slate-400 text-sm">Chunk-based upload & processing engine</p>
+            </div>
+            <div id="health-status" class="flex items-center gap-2 px-4 py-2 bg-slate-900 rounded-full border border-slate-700">
+                <div class="w-2 h-2 rounded-full bg-slate-500 animate-pulse"></div>
+                <span class="text-xs font-semibold text-slate-300">Checking...</span>
+            </div>
+        </header>
 
-        <div class="input-group">
-            <label for="taskId">Task ID</label>
-            <input type="text" id="taskId" placeholder="e.g. task-123" value="test-task">
-        </div>
-        <div class="input-group">
-            <label for="action">Action</label>
-            <input type="text" id="action" placeholder="e.g. upload" value="process">
-        </div>
-        <button onclick="triggerTask()">Trigger Task</button>
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Upload Control -->
+            <section class="lg:col-span-1 space-y-6">
+                <div class="bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <span>📤</span> New Upload
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center hover:border-blue-500 transition-colors cursor-pointer" id="drop-zone">
+                            <input type="file" id="file-input" class="hidden">
+                            <p class="text-sm text-slate-400" id="file-label">Click or drag file here</p>
+                        </div>
+                        <button id="upload-btn" disabled class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed font-semibold transition-all shadow-lg shadow-blue-900/20">
+                            Start Processing
+                        </button>
+                    </div>
+                </div>
 
-        <div id="log">Logs will appear here...</div>
+                <div class="bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700">
+                    <h2 class="text-lg font-semibold mb-4">Pipeline Logs</h2>
+                    <div id="logs" class="text-[10px] font-mono h-48 overflow-y-auto space-y-1 text-slate-400 custom-scrollbar">
+                        > Waiting for user input...
+                    </div>
+                </div>
+            </section>
+
+            <!-- Active Sessions -->
+            <section class="lg:col-span-2 space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold">Active Sessions</h2>
+                    <button onclick="fetchSessions()" class="text-xs text-blue-400 hover:text-blue-300">Refresh List</button>
+                </div>
+                <div id="sessions-container" class="space-y-4">
+                    <!-- Cards will be injected here -->
+                </div>
+            </section>
+        </main>
     </div>
 
     <script>
-        const logEl = document.getElementById('log');
-        const healthBadge = document.getElementById('health-badge');
+        const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB
+        const logsEl = document.getElementById('logs');
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
+        const uploadBtn = document.getElementById('upload-btn');
+        const fileLabel = document.getElementById('file-label');
 
-        function log(msg) {
+        let selectedFile = null;
+
+        function log(msg, type = 'info') {
             const time = new Date().toLocaleTimeString();
-            logEl.textContent = `[${time}] ${msg}\n` + logEl.textContent;
+            const color = type === 'error' ? 'text-red-400' : (type === 'success' ? 'text-green-400' : 'text-slate-400');
+            const line = document.createElement('div');
+            line.className = color;
+            line.innerHTML = `<span class="opacity-50">[${time}]</span> ${msg}`;
+            logsEl.prepend(line);
+        }
+
+        // --- UI Events ---
+        dropZone.onclick = () => fileInput.click();
+        fileInput.onchange = (e) => {
+            selectedFile = e.target.files[0];
+            if (selectedFile) {
+                fileLabel.innerText = `${selectedFile.name} (${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`;
+                uploadBtn.disabled = false;
+                log(`Selected: ${selectedFile.name}`);
+            }
+        };
+
+        uploadBtn.onclick = startUpload;
+
+        async function startUpload() {
+            if (!selectedFile) return;
+            uploadBtn.disabled = true;
+            
+            const totalChunks = Math.ceil(selectedFile.size / CHUNK_SIZE);
+            log(`Initializing upload: ${totalChunks} chunks...`);
+
+            try {
+                // 1. Init
+                const initRes = await fetch('/api/upload/init', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileName: selectedFile.name,
+                        fileSize: selectedFile.size,
+                        totalChunks
+                    })
+                });
+                const { uploadId } = await initRes.json();
+                log(`Session created: ${uploadId}`, 'success');
+
+                // 2. Chunking loop
+                for (let i = 0; i < totalChunks; i++) {
+                    const start = i * CHUNK_SIZE;
+                    const end = Math.min(start + CHUNK_SIZE, selectedFile.size);
+                    const chunk = selectedFile.slice(start, end);
+
+                    const formData = new FormData();
+                    formData.append('uploadId', uploadId);
+                    formData.append('chunkIndex', i);
+                    formData.append('chunk', chunk);
+
+                    await fetch('/api/upload/chunk', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (i % 5 === 0 || i === totalChunks - 1) {
+                        log(`Sent chunk ${i + 1}/${totalChunks}`);
+                    }
+                }
+
+                log(`All chunks sent. Pipeline processing started.`, 'success');
+                fetchSessions();
+            } catch (err) {
+                log(`Upload failed: ${err.message}`, 'error');
+                uploadBtn.disabled = false;
+            }
+        }
+
+        async function fetchSessions() {
+            try {
+                const res = await fetch('/api/sessions');
+                const sessions = await res.json();
+                renderSessions(sessions);
+            } catch (e) {}
+        }
+
+        function renderSessions(sessions) {
+            const container = document.getElementById('sessions-container');
+            if (sessions.length === 0) {
+                container.innerHTML = '<div class="text-center py-12 text-slate-500 italic">No active sessions</div>';
+                return;
+            }
+
+            container.innerHTML = sessions.map(s => `
+                <div class="session-card bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="font-semibold text-slate-200">${s.fileName}</h3>
+                            <p class="text-[10px] text-slate-500 font-mono">${s.uploadId}</p>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusColor(s.status)}">
+                            ${s.status}
+                        </span>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        ${renderProgress('Upload', s.progress.upload, 'bg-blue-500')}
+                        ${renderProgress('Transcode', s.progress.transcode, 'bg-purple-500')}
+                        ${renderProgress('CDN Distribution', s.progress.distribute, 'bg-emerald-500')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderProgress(label, value, color) {
+            return `
+                <div>
+                    <div class="flex justify-between text-[10px] mb-1 px-1">
+                        <span class="text-slate-400 font-medium">${label}</span>
+                        <span class="text-slate-300">${value}%</span>
+                    </div>
+                    <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                        <div class="progress-bar ${color} h-full" style="width: ${value}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getStatusColor(status) {
+            switch(status) {
+                case 'complete': return 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+                case 'error': return 'bg-red-500/20 text-red-400 border border-red-500/30';
+                case 'uploading': return 'bg-blue-500/20 text-blue-400 border border-blue-500/30';
+                default: return 'bg-amber-500/20 text-amber-400 border border-amber-500/30';
+            }
         }
 
         async function checkHealth() {
+            const badge = document.getElementById('health-status');
             try {
                 const res = await fetch('/api/v1/health');
                 const data = await res.json();
-                if (data.status === 'ok') {
-                    healthBadge.textContent = 'System Online';
-                    healthBadge.className = 'status-badge ok';
-                }
+                badge.innerHTML = `<div class="w-2 h-2 rounded-full bg-emerald-500"></div><span class="text-xs font-semibold text-emerald-400">Online</span>`;
             } catch (e) {
-                healthBadge.textContent = 'System Offline';
-                healthBadge.className = 'status-badge';
+                badge.innerHTML = `<div class="w-2 h-2 rounded-full bg-red-500"></div><span class="text-xs font-semibold text-red-400">Offline</span>`;
             }
         }
 
-        async function triggerTask() {
-            const taskId = document.getElementById('taskId').value;
-            const action = document.getElementById('action').value;
-
-            log(`Triggering ${action} for ${taskId}...`);
-            try {
-                const res = await fetch('/api/v1/trigger', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ taskId, action })
-                });
-                const data = await res.json();
-                log(`Response: ${JSON.stringify(data)}`);
-            } catch (e) {
-                log(`Error: ${e.message}`);
-            }
-        }
-
-        // Initial check and periodic refresh
+        setInterval(fetchSessions, 2000);
+        setInterval(checkHealth, 5000);
         checkHealth();
-        setInterval(checkHealth, 10000);
+        fetchSessions();
     </script>
 </body>
 </html>
