@@ -1,8 +1,18 @@
-# Large File Upload Service
+# Large File & Video Pipeline Service
 
-A high-performance service built with Express and Bun for handling large file uploads and background processing tasks.
+A high-performance, chunk-based upload and processing engine built with **Express** and **Bun**. This service handles multi-gigabyte file uploads by splitting them into small chunks, followed by an automated pipeline for assembly, simulated transcoding, and CDN distribution.
 
-## 🚀 Getting Started
+## 🚀 Features
+
+- **Chunk-based Resumable Uploads**: Splits files into 2MB chunks to ensure reliability.
+- **Automated Pipeline**: 
+  - **Assembly**: Merges chunks into the final file with integrity checks.
+  - **Simulated Transcoding**: Processes files into multiple variants (4K, 1080p, etc.).
+  - **CDN Distribution**: Simulates global distribution to edge locations.
+- **Modern Dashboard**: Real-time progress tracking for every stage of the pipeline.
+- **High Performance**: Powered by the Bun runtime for ultra-fast I/O.
+
+## 🛠 Getting Started
 
 ### Prerequisites
 - [Bun](https://bun.sh/) runtime installed.
@@ -12,31 +22,30 @@ A high-performance service built with Express and Bun for handling large file up
 bun install
 ```
 
-### Running the server
+### Running the Server
 ```bash
-bun run src/index.ts
+# Development mode (with hot reload)
+bun dev
+
+# Production mode
+bun start
 ```
-The server will start at `http://localhost:3000`.
+The dashboard will be available at `http://localhost:3000`.
 
-## 🛠 Current Features
-- **Express on Bun**: Utilizes Bun's high-performance runtime for Express APIs.
-- **Health Monitoring**: Integrated health check endpoints.
-- **Task Processing**: Initial `ProcessService` for handling asynchronous payloads.
+## 📡 API Architecture
 
-## 📡 API Endpoints
+### Upload Pipeline
+- `POST /api/upload/init` - Initialize a new upload session.
+- `POST /api/upload/chunk` - Upload an individual file chunk (multipart/form-data).
+- `GET /api/upload/status/:uploadId` - Poll the real-time status of a specific session.
+- `GET /api/sessions` - List all active and completed sessions.
 
 ### System
-- `GET /api/v1/health` - Returns the service status and uptime.
-- `POST /api/v1/trigger` - Queues a processing task.
-  - **Request Body**:
-    ```json
-    {
-      "taskId": "unique-id",
-      "action": "start"
-    }
-    ```
+- `GET /health` - Basic server health check.
 
 ## 📂 Project Structure
-- `src/index.ts`: Entry point and server configuration.
-- `src/routes/`: API route definitions (e.g., `systemRouter`).
-- `src/services/`: Core logic and task execution services.
+- `src/index.ts`: Main application logic, route handlers, and pipeline implementation.
+- `public/`: Frontend dashboard (HTML/Tailwind CSS).
+- `uploads/`:
+  - `chunks/`: Temporary storage for partial uploads.
+  - `final/`: Directory for assembled and processed files.
