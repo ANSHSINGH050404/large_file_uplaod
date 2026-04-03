@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Large File Upload Dashboard</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --accent: #3b82f6;
+            --success: #10b981;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: var(--card);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        h1 { margin-bottom: 1.5rem; font-size: 1.5rem; text-align: center; }
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            background-color: #475569;
+            margin-bottom: 1.5rem;
+        }
+        .status-badge.ok { background-color: var(--success); }
+        .input-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; }
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: white;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: none;
+            background-color: var(--accent);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        #log {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #0f172a;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.8125rem;
+            max-height: 150px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Backend Dashboard</h1>
+        <div style="text-align: center;">
+            <span id="health-badge" class="status-badge">Checking Status...</span>
+        </div>
+
+        <div class="input-group">
+            <label for="taskId">Task ID</label>
+            <input type="text" id="taskId" placeholder="e.g. task-123" value="test-task">
+        </div>
+        <div class="input-group">
+            <label for="action">Action</label>
+            <input type="text" id="action" placeholder="e.g. upload" value="process">
+        </div>
+        <button onclick="triggerTask()">Trigger Task</button>
+
+        <div id="log">Logs will appear here...</div>
+    </div>
+
+    <script>
+        const logEl = document.getElementById('log');
+        const healthBadge = document.getElementById('health-badge');
+
+        function log(msg) {
+            const time = new Date().toLocaleTimeString();
+            logEl.textContent = `[${time}] ${msg}\n` + logEl.textContent;
+        }
+
+        async function checkHealth() {
+            try {
+                const res = await fetch('/api/v1/health');
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    healthBadge.textContent = 'System Online';
+                    healthBadge.className = 'status-badge ok';
+                }
+            } catch (e) {
+                healthBadge.textContent = 'System Offline';
+                healthBadge.className = 'status-badge';
+            }
+        }
+
+        async function triggerTask() {
+            const taskId = document.getElementById('taskId').value;
+            const action = document.getElementById('action').value;
+
+            log(`Triggering ${action} for ${taskId}...`);
+            try {
+                const res = await fetch('/api/v1/trigger', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ taskId, action })
+                });
+                const data = await res.json();
+                log(`Response: ${JSON.stringify(data)}`);
+            } catch (e) {
+                log(`Error: ${e.message}`);
+            }
+        }
+
+        // Initial check and periodic refresh
+        checkHealth();
+        setInterval(checkHealth, 10000);
+    </script>
+</body>
+</html>
