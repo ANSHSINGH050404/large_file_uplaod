@@ -1,4 +1,12 @@
-import { Router, Request, Response } from 'express';
-import { ProcessService } from '../services/process';
+export class ProcessService {
+
+  static async executeTask(payload: any) {
+    console.log("Processing payload:", payload);
+
+    await Bun.sleep(500); 
+    return { success: true, timestamp: Date.now() };
+  }
+}a
+
 
 
